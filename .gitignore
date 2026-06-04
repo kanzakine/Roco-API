@@ -1,0 +1,19 @@
+# 编译产物
+roco-api
+roco-api.exe
+__debug_bin.exe
+*.exe
+
+# 调试文件
+page_raw.html
+page_raw.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统
+.DS_Store
+Thumbs.db
