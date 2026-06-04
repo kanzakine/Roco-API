@@ -36,7 +36,7 @@
 ### 安装
 
 ```bash
-git clone https://github.com/kanzakine/roco-api.git
+git clone https://github.com/your-username/roco-api.git
 cd roco-api
 go mod tidy
 ```
@@ -55,8 +55,8 @@ go mod tidy
     "interval": 3
   },
   "serverchan": {
-    "uid": "",
-    "sendkey": ""
+    "uid": "你的uid，这两项不填则默认不推送",
+    "sendkey": "你的sendkey"
   }
 }
 ```
@@ -95,7 +95,7 @@ go run main.go
 
 ---
 
-## � Docker 部署
+## 🐳 Docker 部署
 
 ### 前置条件
 
@@ -106,7 +106,7 @@ go run main.go
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/kanzakine/roco-api.git
+git clone https://github.com/your-username/roco-api.git
 cd roco-api
 
 # 2. 编辑配置

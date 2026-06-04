@@ -155,11 +155,7 @@ func Do() {
 		}
 	}
 
-	// 更新过往商品
-	updatePastProducts(products)
-
 	// 更新缓存
-	currentSlotLabel := currentSlot(slots, now)
 	CacheMutex.Lock()
 	Cache = model.CrawlResult{
 		TimeSlots:   slots,
@@ -174,18 +170,12 @@ func Do() {
 
 	// 推送逻辑
 	if config.ServerChanEnabled() && onsaleCount > 0 {
-		var onsaleProducts []model.Product
-		for _, p := range products {
-			if p.IsOnSale {
-				onsaleProducts = append(onsaleProducts, p)
-			}
-		}
-
-		if needPush(onsaleProducts) {
+		newItems := CollectNew(products)
+		if len(newItems) > 0 {
 			title := fmt.Sprintf("🏪 新商品上架 · %d 件在售", onsaleCount)
-			desp := buildPushMessage(onsaleProducts, currentSlotLabel)
+			desp := BuildMsg(newItems)
 			notify.Send(title, desp)
-			markPushed(onsaleProducts)
+			MarkPushed(newItems)
 		}
 	}
 }
@@ -263,8 +253,8 @@ func extractProducts(doc *goquery.Document, slots []model.ShopSlot, now time.Tim
 				// 当前时间在 [startTime, endTime) 范围内 => 在售
 				isOnSale = now.After(startTime) && now.Before(endTime)
 
-				// 计算所属时段标签（用开始时间的中国时区小时数匹配）
-				slotLabel = slotForTime(slots, startTime, endTime)
+				// 计算所属时段标签
+				slotLabel = SlotByTime(dataTimeStr)
 
 				if isOnSale {
 					diff := endTime.Sub(now)
@@ -324,82 +314,6 @@ func currentSlot(slots []model.ShopSlot, now time.Time) string {
 	return slots[len(slots)-1].Label
 }
 
-func slotForTime(slots []model.ShopSlot, startTime, endTime time.Time) string {
-	if len(slots) == 0 {
-		return "未知时段"
-	}
-	// data-time 是结束时间的 UTC 时间戳
-	// 用结束时间减 4h 得到开始时间，然后转 CST 取小时来匹配时段
-	endCST := endTime.In(time.FixedZone("CST", 8*3600))
-	startCST := endCST.Add(-4 * time.Hour)
-	startH := startCST.Hour()
-
-	for _, slot := range slots {
-		sh, eh := parseSlotHours(slot.Label)
-		if startH >= sh && startH < eh {
-			return slot.Label
-		}
-	}
-	return slots[len(slots)-1].Label
-}
-
-func parseSlotHours(label string) (int, int) {
-	parts := strings.Split(label, "-")
-	if len(parts) != 2 {
-		return 0, 24
-	}
-	startH, _ := strconv.Atoi(strings.Split(parts[0], ":")[0])
-	endH, _ := strconv.Atoi(strings.Split(parts[1], ":")[0])
-	return startH, endH
-}
-
 // ============================================================
-// 推送消息构建
+// 定时爬取（实现在 tracker.go 中）
 // ============================================================
-
-func buildPushMessage(onsaleProducts []model.Product, currentSlotLabel string) string {
-	var b strings.Builder
-
-	b.WriteString(fmt.Sprintf("## 🕐 %s\n\n", currentSlotLabel))
-
-	for _, p := range onsaleProducts {
-		b.WriteString(fmt.Sprintf("**%s**  💰 %s", p.Name, p.Price))
-		if p.Limit != "" {
-			b.WriteString(fmt.Sprintf("  📦 %s", p.Limit))
-		}
-		if p.Category != "" {
-			b.WriteString(fmt.Sprintf("  📂 %s", p.Category))
-		}
-		if p.RemainStr != "" {
-			b.WriteString(fmt.Sprintf("  ⏱ %s", p.RemainStr))
-		}
-		b.WriteString("\n\n")
-	}
-
-	if !isFirstBatch() {
-		pastList := getPastProducts()
-		if len(pastList) > 0 {
-			b.WriteString("---\n")
-			b.WriteString("### 📜 今日过往商品\n\n")
-			for _, item := range pastList {
-				b.WriteString(item + "\n")
-			}
-			b.WriteString("\n")
-		}
-	}
-
-	b.WriteString("---\n")
-	b.WriteString("📡 [查看完整页面](http://localhost" + config.AppConfig.Server.Port + ")\n")
-	return b.String()
-}
-
-// StartCron 启动定时爬取
-func StartCron() {
-	ticker := time.NewTicker(config.CrawlInterval())
-	defer ticker.Stop()
-
-	for range ticker.C {
-		fmt.Printf("[%s] ⏰ 定时爬取中...\n", time.Now().Format("15:04:05"))
-		Do()
-	}
-}

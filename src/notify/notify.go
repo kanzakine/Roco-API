@@ -6,21 +6,33 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"roco-api/config"
 )
 
+// chanCreds 获取推送凭证：优先读环境变量，其次 config.json
+func chanCreds() (uid, key string) {
+	uid = os.Getenv("CHAN_UID")
+	key = os.Getenv("CHAN_KEY")
+	if uid == "" {
+		uid = config.AppConfig.ServerChan.UID
+	}
+	if key == "" {
+		key = config.AppConfig.ServerChan.SendKey
+	}
+	return
+}
+
 // Send 发送 Server酱³ 推送
 func Send(title, desp string) {
-	if !config.ServerChanEnabled() {
+	uid, key := chanCreds()
+	if uid == "" || key == "" {
 		return
 	}
 
-	apiURL := fmt.Sprintf("https://%s.push.ft07.com/send/%s.send",
-		config.AppConfig.ServerChan.UID,
-		config.AppConfig.ServerChan.SendKey,
-	)
+	apiURL := fmt.Sprintf("https://%s.push.ft07.com/send/%s.send", uid, key)
 
 	body, _ := json.Marshal(map[string]string{
 		"title": title,
