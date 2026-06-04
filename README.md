@@ -29,6 +29,77 @@
 
 ## 🚀 快速开始
 
+## 🐳 方式一：Docker 部署（推荐）
+
+### 前置条件
+
+- [Docker](https://docs.docker.com/engine/install/) 24+
+- [Docker Compose](https://docs.docker.com/compose/install/) v2+
+
+### Docker Compose
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/your-username/roco-api.git
+cd roco-api
+
+# 2. 编辑配置
+vim config.json
+
+所有配置集中保存在 `config.json` 中：
+
+```json
+{
+  "server": {
+    "port": ":8008"
+  },
+  "crawl": {
+    "target_url": "https://www.onebiji.com/hykb_tools/comm/lkwgmerchant/preview.php?id=1&immgj=0",
+    "interval": 3
+  },
+  "serverchan": {
+    "uid": "你的uid",
+    "sendkey": "你的sendkey"
+  }
+}
+```
+
+| 配置项 | 说明 |
+|--------|------|
+| `server.port` | HTTP 服务端口 |
+| `crawl.target_url` | 爬取目标网址 |
+| `crawl.interval` | 爬取间隔（分钟） |
+| `serverchan.uid` | Server酱³ 的 UID（留空则不启用推送） |
+| `serverchan.sendkey` | Server酱³ 的 SendKey（留空则不启用推送） |
+
+> 如果 `uid` 和 `sendkey` 均为空，推送功能将自动禁用，不影响正常使用。
+
+# 3. 一键启动
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+
+# 停止服务
+docker compose down
+```
+
+
+### 镜像说明
+
+| 特性 | 说明 |
+|------|------|
+| 基础镜像 | `alpine:3.21`（约 5MB） |
+| 最终镜像大小 | ≈ **20MB** |
+| 构建方式 | 多阶段构建（`golang:alpine` → `alpine`） |
+| 健康检查 | 每 30s 检测 `/` 接口 |
+| 配置热更新 | 修改 `config.json` 后 `docker compose restart` 即可 |
+
+---
+
+
+### 方式二：手动运行
+
 ### 前置条件
 
 - [Go](https://go.dev/dl/) 1.21+
@@ -95,59 +166,6 @@ go run main.go
 
 ---
 
-## 🐳 Docker 部署
-
-### 前置条件
-
-- [Docker](https://docs.docker.com/engine/install/) 24+
-- [Docker Compose](https://docs.docker.com/compose/install/) v2+
-
-### 方式一：Docker Compose（推荐）
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/your-username/roco-api.git
-cd roco-api
-
-# 2. 编辑配置
-vim config.json
-
-# 3. 一键启动
-docker compose up -d
-
-# 查看日志
-docker compose logs -f
-
-# 停止服务
-docker compose down
-```
-
-### 方式二：直接 Docker
-
-```bash
-# 构建镜像
-docker build -t roco-api .
-
-# 运行容器
-docker run -d \
-  --name roco-api \
-  -p 8008:8008 \
-  -v $(pwd)/config.json:/app/config.json \
-  -e TZ=Asia/Shanghai \
-  roco-api
-```
-
-### 镜像说明
-
-| 特性 | 说明 |
-|------|------|
-| 基础镜像 | `alpine:3.21`（约 5MB） |
-| 最终镜像大小 | ≈ **20MB** |
-| 构建方式 | 多阶段构建（`golang:alpine` → `alpine`） |
-| 健康检查 | 每 30s 检测 `/` 接口 |
-| 配置热更新 | 修改 `config.json` 后 `docker compose restart` 即可 |
-
----
 
 ## 📡 API 文档
 
@@ -205,7 +223,7 @@ http://localhost:8008
 
 ## 🧪 调用示例
 
-### cURL
+### CURL
 
 ```bash
 # 获取全部商品
