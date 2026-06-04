@@ -29,7 +29,7 @@
 
 ## 🚀 快速开始
 
-## 🐳 方式一：Docker 部署（推荐）
+## 🐳 方式一：Docker 部署（~~推荐~~没来得及测试，明天再说，打包不成功就换第二种方式）
 
 ### 前置条件
 
@@ -43,7 +43,7 @@
 git clone https://github.com/your-username/roco-api.git
 cd roco-api
 
-# 2. 编辑配置
+# 2. 编辑配置，添加你的uid和seedkey
 vim config.json
 
 # 3. 一键启动
@@ -98,7 +98,7 @@ go mod tidy
     "interval": 3
   },
   "serverchan": {
-    "uid": "你的uid，这两项不填则默认不推送",
+    "uid": "你的uid",
     "sendkey": "你的sendkey"
   }
 }
