@@ -23,6 +23,7 @@
 - ✅ 每 3 分钟后台自动刷新缓存
 - ✅ 提供 RESTful JSON API 接口
 - ✅ 自带 Web 状态页面
+- ✅ 支持 Server酱³ 手机推送通知
 
 ---
 
@@ -35,10 +36,40 @@
 ### 安装
 
 ```bash
-git clone https://github.com/your-username/roco-api.git
+git clone https://github.com/kanzakine/roco-api.git
 cd roco-api
 go mod tidy
 ```
+
+### 配置
+
+所有配置集中保存在 `config.json` 中：
+
+```json
+{
+  "server": {
+    "port": ":8008"
+  },
+  "crawl": {
+    "target_url": "https://www.onebiji.com/hykb_tools/comm/lkwgmerchant/preview.php?id=1&immgj=0",
+    "interval": 3
+  },
+  "serverchan": {
+    "uid": "",
+    "sendkey": ""
+  }
+}
+```
+
+| 配置项 | 说明 |
+|--------|------|
+| `server.port` | HTTP 服务端口 |
+| `crawl.target_url` | 爬取目标网址 |
+| `crawl.interval` | 爬取间隔（分钟） |
+| `serverchan.uid` | Server酱³ 的 UID（留空则不启用推送） |
+| `serverchan.sendkey` | Server酱³ 的 SendKey（留空则不启用推送） |
+
+> 如果 `uid` 和 `sendkey` 均为空，推送功能将自动禁用，不影响正常使用。
 
 ### 运行
 
@@ -61,6 +92,60 @@ go run main.go
 ========================================
 ⏰ 每 3 分钟自动爬取更新数据
 ```
+
+---
+
+## � Docker 部署
+
+### 前置条件
+
+- [Docker](https://docs.docker.com/engine/install/) 24+
+- [Docker Compose](https://docs.docker.com/compose/install/) v2+
+
+### 方式一：Docker Compose（推荐）
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/kanzakine/roco-api.git
+cd roco-api
+
+# 2. 编辑配置
+vim config.json
+
+# 3. 一键启动
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+
+# 停止服务
+docker compose down
+```
+
+### 方式二：直接 Docker
+
+```bash
+# 构建镜像
+docker build -t roco-api .
+
+# 运行容器
+docker run -d \
+  --name roco-api \
+  -p 8008:8008 \
+  -v $(pwd)/config.json:/app/config.json \
+  -e TZ=Asia/Shanghai \
+  roco-api
+```
+
+### 镜像说明
+
+| 特性 | 说明 |
+|------|------|
+| 基础镜像 | `alpine:3.21`（约 5MB） |
+| 最终镜像大小 | ≈ **20MB** |
+| 构建方式 | 多阶段构建（`golang:alpine` → `alpine`） |
+| 健康检查 | 每 30s 检测 `/` 接口 |
+| 配置热更新 | 修改 `config.json` 后 `docker compose restart` 即可 |
 
 ---
 
@@ -118,20 +203,6 @@ http://localhost:8008
 
 ---
 
-## ⚙️ 配置
-
-在 `main.go` 顶部修改常量：
-
-```go
-const (
-    targetURL      = "https://..."        // 爬取目标地址
-    crawlInterval  = 3 * time.Minute      // 爬取间隔
-    serverPort     = ":8008"              // API 服务端口
-)
-```
-
----
-
 ## 🧪 调用示例
 
 ### cURL
@@ -170,10 +241,20 @@ fetch("http://localhost:8008/api/products")
 
 ```
 roco-api/
-├── main.go         # 主程序（爬虫 + API 服务）
-├── go.mod          # Go 模块定义
-├── go.sum          # 依赖锁定
-└── README.md       # 本文件
+├── cmd/server/
+│   └── main.go              # 🚀 程序入口
+├── internal/
+│   ├── config/config.go     # ⚙️ 配置加载
+│   ├── crawler/crawler.go   # 🕷️ 爬虫 + 推送追踪
+│   ├── handler/handler.go   # 🌐 HTTP 路由处理器
+│   └── notify/notify.go     # 🔔 Server酱 推送
+├── pkg/model/model.go       # 📦 数据模型
+├── config.json              # 配置文件
+├── Dockerfile               # 🐳 Docker 多阶段构建
+├── docker-compose.yaml      # Docker Compose 一键部署
+├── .dockerignore            # Docker 构建排除
+├── go.mod / go.sum          # Go 模块依赖
+└── README.md                # 本文件
 ```
 
 ---
@@ -184,6 +265,8 @@ roco-api/
 - **HTTP 服务：** `net/http`（标准库）
 - **HTML 解析：** [goquery](https://github.com/PuerkitoBio/goquery)（jQuery 风格的 HTML 解析器）
 - **数据缓存：** 内存缓存 + `sync.RWMutex` 读写锁
+- **推送服务：** [Server酱³](https://sc3.ft07.com) - 手机推送通知
+- **容器化：** Docker 多阶段构建（`golang:alpine` → `alpine`）
 
 ---
 
