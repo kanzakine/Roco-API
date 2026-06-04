@@ -274,11 +274,7 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, `    </p>
   </div>
-  <h2>API 接口</h2>
-  <div class="card">
-    <p><strong>GET <code><a href="/api/products">/api/products</a></code></strong> — 全部商品数据 (JSON)</p>
-    <p><strong>GET <code><a href="/api/onsale">/api/onsale</a></code></strong> — 仅在售商品 (JSON)</p>
-  </div>
+
   <h2>当前商品</h2>
 `)
 	for _, p := range result.Products {
