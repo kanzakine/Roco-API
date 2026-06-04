@@ -46,34 +46,6 @@ cd roco-api
 # 2. 编辑配置
 vim config.json
 
-所有配置集中保存在 `config.json` 中：
-
-```json
-{
-  "server": {
-    "port": ":8008"
-  },
-  "crawl": {
-    "target_url": "https://www.onebiji.com/hykb_tools/comm/lkwgmerchant/preview.php?id=1&immgj=0",
-    "interval": 3
-  },
-  "serverchan": {
-    "uid": "你的uid",
-    "sendkey": "你的sendkey"
-  }
-}
-```
-
-| 配置项 | 说明 |
-|--------|------|
-| `server.port` | HTTP 服务端口 |
-| `crawl.target_url` | 爬取目标网址 |
-| `crawl.interval` | 爬取间隔（分钟） |
-| `serverchan.uid` | Server酱³ 的 UID（留空则不启用推送） |
-| `serverchan.sendkey` | Server酱³ 的 SendKey（留空则不启用推送） |
-
-> 如果 `uid` 和 `sendkey` 均为空，推送功能将自动禁用，不影响正常使用。
-
 # 3. 一键启动
 docker compose up -d
 
