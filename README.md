@@ -36,13 +36,16 @@
 
 ```bash
 git clone https://github.com/your-username/roco-api.git
-cd roco-api
+cd Roco-API
 go mod tidy
 ```
 
 ### 配置
 
 所有配置集中保存在 `config.json` 中：
+```
+vim config.json
+```
 
 ```json
 {
@@ -54,8 +57,8 @@ go mod tidy
     "interval": 3
   },
   "serverchan": {
-    "uid": "",
-    "sendkey": ""
+    "uid": "your_uid",
+    "sendkey": "your_sendkey"
   }
 }
 ```
@@ -77,62 +80,35 @@ go mod tidy
 > 如果 `uid` 和 `sendkey` 均为空，推送功能将自动禁用，不影响正常使用。
 
 ### 运行
+(推荐安装Screen切后台运行)
+
+#调试启动（推荐）
 
 ```bash
-# 开发调试
-go run ./cmd/server/
-
-# 或编译后运行（跨平台，自动识别系统）
-go build -o roco-api ./cmd/server/
-./roco-api
+go run ./
 ```
+# 或编译后运行（跨平台，自动识别系统）
+go build -o Roco-API ./
+./roco-API
+
 
 启动后输出：
 
 ```
-📋 配置加载完成 (端口: :8008, 爬取间隔: 3分钟)
-🔕 Server酱 推送未配置（如需启用，请填写 config.json 中的 uid 和 sendkey）
-🔄 首次爬取远行商人数据...
-✅ 爬取完成: 6 件商品, 2 件在售中
+[配置] 配置加载完成 (端口: :8008, 爬取间隔: 3分钟)
+[通知] Server酱 推送已启用
+[任务] 首次爬取远行商人数据...
+[完成] 爬取完成: 9 件商品, 6 件在售中
+2026/06/05 16:46:35 [完成] Server酱 推送成功
 
 ========================================
-🚀 API 服务已启动: http://localhost:8008
-   可用接口:
-     GET  /              - 服务状态页
-     GET  /api/products  - 所有商品数据 (JSON)
-     GET  /api/onsale    - 仅在售商品 (JSON)
+[启动] API 服务已启动: http://localhost:8008
+   GET /api/products  - 全部商品
+   GET /api/onsale    - 在售商品
 ========================================
-⏰ 每 3 分钟自动爬取更新数据
+[定时] 每 3 分钟自动爬取更新数据
 ```
 
-配置推送后启动输出：
-
-```
-📋 配置加载完成 (端口: :8008, 爬取间隔: 3分钟)
-🔔 Server酱 推送已启用
-🔄 首次爬取远行商人数据...
-✅ 爬取完成: 6 件商品, 2 件在售中
-✅ Server酱 推送成功
-
-========================================
-🚀 API 服务已启动: http://localhost:8008
-   ...
-```
-
-### 🐧 Linux 部署
-
-```bash
-# 在 Linux 上编译（或在 Windows 上交叉编译）
-GOOS=linux GOARCH=amd64 go build -o roco-api ./cmd/server/
-
-# 上传到服务器后
-chmod +x roco-api
-./roco-api
-```
-
-> `go build` 默认编译当前系统架构的可执行文件，**无需修改代码**即可在 Linux/macOS/Windows 上运行。编译产物的文件名会自动匹配目标系统（Linux 下不含 `.exe` 后缀）。
-
----
 
 ## 📡 API 文档
 
