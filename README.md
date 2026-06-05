@@ -23,58 +23,14 @@
 - ✅ 每 3 分钟后台自动刷新缓存
 - ✅ 提供 RESTful JSON API 接口
 - ✅ 自带 Web 状态页面
-- ✅ 支持 Server酱³ 手机推送通知
 
 ---
 
 ## 🚀 快速开始
 
-## 🐳 方式一：Docker 部署（~~推荐~~没来得及测试，明天再说，打包不成功就换第二种方式）
-
 ### 前置条件
 
-- [Docker](https://docs.docker.com/engine/install/) 24+
-- [Docker Compose](https://docs.docker.com/compose/install/) v2+
-
-### Docker Compose
-
-```bash
-# 1. 克隆项目
-git clone https://github.com/your-username/roco-api.git
-cd roco-api
-
-# 2. 编辑配置，添加你的uid和seedkey
-vim config.json
-
-# 3. 一键启动
-docker compose up -d
-
-# 查看日志
-docker compose logs -f
-
-# 停止服务
-docker compose down
-```
-
-
-### 镜像说明
-
-| 特性 | 说明 |
-|------|------|
-| 基础镜像 | `alpine:3.21`（约 5MB） |
-| 最终镜像大小 | ≈ **20MB** |
-| 构建方式 | 多阶段构建（`golang:alpine` → `alpine`） |
-| 健康检查 | 每 30s 检测 `/` 接口 |
-| 配置热更新 | 修改 `config.json` 后 `docker compose restart` 即可 |
-
----
-
-
-### 方式二：手动运行
-
-### 前置条件
-
-- [Go](https://go.dev/dl/) 1.21+
+- [Go](https://go.dev/dl/) 1.26+
 
 ### 安装
 
@@ -98,8 +54,8 @@ go mod tidy
     "interval": 3
   },
   "serverchan": {
-    "uid": "你的uid",
-    "sendkey": "你的sendkey"
+    "uid": "",
+    "sendkey": ""
   }
 }
 ```
@@ -112,17 +68,30 @@ go mod tidy
 | `serverchan.uid` | Server酱³ 的 UID（留空则不启用推送） |
 | `serverchan.sendkey` | Server酱³ 的 SendKey（留空则不启用推送） |
 
+### � Server酱 推送配置
+
+1. 前往 [Server酱³ SendKey 页面](https://sc3.ft07.com/sendkey) 获取你的 `UID` 和 `SendKey`
+2. 填写到 `config.json` 的 `serverchan` 字段中
+3. 重启服务即可生效
+
 > 如果 `uid` 和 `sendkey` 均为空，推送功能将自动禁用，不影响正常使用。
 
 ### 运行
 
 ```bash
-go run main.go
+# 开发调试
+go run ./cmd/server/
+
+# 或编译后运行（跨平台，自动识别系统）
+go build -o roco-api ./cmd/server/
+./roco-api
 ```
 
 启动后输出：
 
 ```
+📋 配置加载完成 (端口: :8008, 爬取间隔: 3分钟)
+🔕 Server酱 推送未配置（如需启用，请填写 config.json 中的 uid 和 sendkey）
 🔄 首次爬取远行商人数据...
 ✅ 爬取完成: 6 件商品, 2 件在售中
 
@@ -136,8 +105,34 @@ go run main.go
 ⏰ 每 3 分钟自动爬取更新数据
 ```
 
----
+配置推送后启动输出：
 
+```
+📋 配置加载完成 (端口: :8008, 爬取间隔: 3分钟)
+🔔 Server酱 推送已启用
+🔄 首次爬取远行商人数据...
+✅ 爬取完成: 6 件商品, 2 件在售中
+✅ Server酱 推送成功
+
+========================================
+🚀 API 服务已启动: http://localhost:8008
+   ...
+```
+
+### 🐧 Linux 部署
+
+```bash
+# 在 Linux 上编译（或在 Windows 上交叉编译）
+GOOS=linux GOARCH=amd64 go build -o roco-api ./cmd/server/
+
+# 上传到服务器后
+chmod +x roco-api
+./roco-api
+```
+
+> `go build` 默认编译当前系统架构的可执行文件，**无需修改代码**即可在 Linux/macOS/Windows 上运行。编译产物的文件名会自动匹配目标系统（Linux 下不含 `.exe` 后缀）。
+
+---
 
 ## 📡 API 文档
 
@@ -193,9 +188,23 @@ http://localhost:8008
 
 ---
 
+## ⚙️ 配置
+
+在 `main.go` 顶部修改常量：
+
+```go
+const (
+    targetURL      = "https://..."        // 爬取目标地址
+    crawlInterval  = 3 * time.Minute      // 爬取间隔
+    serverPort     = ":8008"              // API 服务端口
+)
+```
+
+---
+
 ## 🧪 调用示例
 
-### CURL
+### cURL
 
 ```bash
 # 获取全部商品
@@ -231,20 +240,10 @@ fetch("http://localhost:8008/api/products")
 
 ```
 roco-api/
-├── cmd/server/
-│   └── main.go              # 🚀 程序入口
-├── internal/
-│   ├── config/config.go     # ⚙️ 配置加载
-│   ├── crawler/crawler.go   # 🕷️ 爬虫 + 推送追踪
-│   ├── handler/handler.go   # 🌐 HTTP 路由处理器
-│   └── notify/notify.go     # 🔔 Server酱 推送
-├── pkg/model/model.go       # 📦 数据模型
-├── config.json              # 配置文件
-├── Dockerfile               # 🐳 Docker 多阶段构建
-├── docker-compose.yaml      # Docker Compose 一键部署
-├── .dockerignore            # Docker 构建排除
-├── go.mod / go.sum          # Go 模块依赖
-└── README.md                # 本文件
+├── main.go         # 主程序（爬虫 + API 服务）
+├── go.mod          # Go 模块定义
+├── go.sum          # 依赖锁定
+└── README.md       # 本文件
 ```
 
 ---
@@ -255,8 +254,6 @@ roco-api/
 - **HTTP 服务：** `net/http`（标准库）
 - **HTML 解析：** [goquery](https://github.com/PuerkitoBio/goquery)（jQuery 风格的 HTML 解析器）
 - **数据缓存：** 内存缓存 + `sync.RWMutex` 读写锁
-- **推送服务：** [Server酱³](https://sc3.ft07.com) - 手机推送通知
-- **容器化：** Docker 多阶段构建（`golang:alpine` → `alpine`）
 
 ---
 

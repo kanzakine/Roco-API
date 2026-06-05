@@ -13,9 +13,15 @@ __debug_bin*
 .DS_Store
 Thumbs.db
 
-# 编辑器备份文件
+# 编辑备份
 *~
+*.bak
 
 # 调试文件
 raw.html
 page_raw.html
+debug_*.html
+test_*.go
+
+# 日志
+*.log

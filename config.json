@@ -7,7 +7,7 @@
     "interval": 3
   },
   "serverchan": {
-    "uid": "",
-    "sendkey": ""
+    "uid": "your_uid",
+    "sendkey": "your_sendkey"
   }
 }
