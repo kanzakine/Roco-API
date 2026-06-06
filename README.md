@@ -94,8 +94,8 @@ go run ./
 ```
 
 #或编译后运行（跨平台，自动识别系统）
-```
-go build -o Roco-API ./ && ./roco-API
+```bash
+go build -o Roco-API . && ./Roco-API
 ```
 
 
@@ -181,6 +181,33 @@ const (
     crawlInterval  = 3 * time.Minute      // 爬取间隔
     serverPort     = ":8008"              // API 服务端口
 )
+```
+
+---
+
+## 🔄 更新服务
+
+从旧版本升级到最新版本：
+
+```bash
+# 1. 进入项目目录
+cd Roco-API
+
+# 2. 拉取最新代码
+git pull
+
+# 3. 重新编译
+go build -o Roco-API .
+
+# 4. 重启服务
+# 如果直接用 screen 运行：
+ps aux | grep Roco-API   # 找到 PID
+kill <PID>               # 杀掉旧进程
+./Roco-API               # 启动新版本
+
+
+> 💡 `config.json` 不会在 `git pull` 时被覆盖（已加入 `.gitignore`），配置保持不变。
+
 ```
 
 ---
