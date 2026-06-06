@@ -32,6 +32,11 @@
 
 - [Go](https://go.dev/dl/) 1.26+
 
+#### 一键安装go
+```
+source <(curl -L https://go-install.netlify.app/install.sh)
+```
+
 ### 安装
 
 ```bash
@@ -71,7 +76,7 @@ vim config.json
 | `serverchan.uid` | Server酱³ 的 UID（留空则不启用推送） |
 | `serverchan.sendkey` | Server酱³ 的 SendKey（留空则不启用推送） |
 
-### � Server酱 推送配置
+### Server酱 推送配置
 
 1. 前往 [Server酱³ SendKey 页面](https://sc3.ft07.com/sendkey) 获取你的 `UID` 和 `SendKey`
 2. 填写到 `config.json` 的 `serverchan` 字段中
@@ -87,9 +92,11 @@ vim config.json
 ```bash
 go run ./
 ```
-# 或编译后运行（跨平台，自动识别系统）
-go build -o Roco-API ./
-./roco-API
+
+#或编译后运行（跨平台，自动识别系统）
+```
+go build -o Roco-API ./ && ./roco-API
+```
 
 
 启动后输出：
