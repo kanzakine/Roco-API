@@ -96,7 +96,15 @@ func needPush(onsaleProducts []Product) bool {
 	// 如果日期变了，重置追踪
 	today := time.Now().Format("2006-01-02")
 	if pushTracker.Date != today {
+		// 跨天时：保留当前在售商品的已推送标记，避免00:00误推送
+		oldSent := pushTracker.SentNames
 		initPushTracker()
+		// 将旧日期的在售商品标记为已推送
+		for _, p := range onsaleProducts {
+			if oldSent[p.Name] {
+				pushTracker.SentNames[p.Name] = true
+			}
+		}
 	}
 
 	// 检查是否有新商品未推送过
@@ -119,6 +127,8 @@ func markPushed(onsaleProducts []Product) {
 }
 
 // updatePastProducts 更新今日过往（已结束）商品
+// 重要：只记录属于今天（CST时区）时段的已结束商品，
+// 避免跨天时把前一天最后时段（20:00-24:00）的商品记入新的一天。
 func updatePastProducts(products []Product) {
 	pushTrackerLock.Lock()
 	defer pushTrackerLock.Unlock()
@@ -128,11 +138,32 @@ func updatePastProducts(products []Product) {
 		initPushTracker()
 	}
 
+	cstZone := time.FixedZone("CST", 8*3600)
+	now := time.Now().In(cstZone)
+
 	for _, p := range products {
-		// 只有确实已结束（结束时间已过）的商品才记入过往
-		if p.HasEnded && p.SlotLabel != "" {
-			pushTracker.PastNames[p.Name] = p.SlotLabel
+		if !p.HasEnded || p.SlotLabel == "" {
+			continue
 		}
+
+		// 解析时段标签，如 "08:00-12:00" → 开始小时=8
+		parts := strings.Split(p.SlotLabel, "-")
+		if len(parts) != 2 {
+			continue
+		}
+		startHour, err := strconv.Atoi(strings.Split(parts[0], ":")[0])
+		if err != nil {
+			continue
+		}
+
+		// 判断该商品时段是否属于今天：
+		// 如果当前小时 < 时段开始小时，说明这是前一天的时段
+		// 例如：在 00:05 看到 "20:00-24:00" → 0 < 20 → 属于前一天，跳过
+		if now.Hour() < startHour {
+			continue
+		}
+
+		pushTracker.PastNames[p.Name] = p.SlotLabel
 	}
 }
 
@@ -266,6 +297,8 @@ func doCrawl() {
 		category, desc := parseOnclick(onclick)
 
 		var hasEnded bool
+		var isOnSale bool
+		var isUpcoming bool
 		var remainStr string
 		var slotLabel string
 
@@ -278,13 +311,19 @@ func doCrawl() {
 				startTime := endTime.Add(-4 * time.Hour)
 				slotLabel = slotForTime(slots, startTime, endTime)
 
-				// 只要没结束就显示倒计时
 				if !hasEnded {
-					diff := endTime.Sub(now)
-					h := int(diff.Hours())
-					m := int(diff.Minutes()) % 60
-					s := int(diff.Seconds()) % 60
-					remainStr = fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+					// 还没结束 → 判断是否已经开始
+					isOnSale = now.After(startTime) || now.Equal(startTime)
+					isUpcoming = !isOnSale
+
+					// 在售中才显示倒计时
+					if isOnSale {
+						diff := endTime.Sub(now)
+						h := int(diff.Hours())
+						m := int(diff.Minutes()) % 60
+						s := int(diff.Seconds()) % 60
+						remainStr = fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+					}
 				}
 			}
 		}
@@ -296,9 +335,9 @@ func doCrawl() {
 			Category:   category,
 			Desc:       desc,
 			ImageURL:   imgSrc,
-			IsOnSale:   !hasEnded, // 没结束就是在售
+			IsOnSale:   isOnSale, // 已开始且未结束
 			HasEnded:   hasEnded,
-			IsUpcoming: false, // 简化：全部归为在售
+			IsUpcoming: isUpcoming, // 未开始且未结束
 			RemainStr:  remainStr,
 			SlotLabel:  slotLabel,
 		})
@@ -369,6 +408,44 @@ func startHTTPServer() {
 	}
 }
 
+// sortProducts 排序商品：在售优先 → 按时段顺序 → 已结束最后
+func sortProducts(products []Product, slots []ShopSlot) {
+	// 建立时段 → 序号映射
+	slotOrder := make(map[string]int)
+	for i, s := range slots {
+		slotOrder[s.Label] = i
+	}
+
+	// 排序规则：
+	// 1. 在售（IsOnSale=true）排在已结束前面
+	// 2. 同组内按时段顺序（slotOrder）
+	// 3. 同时段内按名称排序
+	for i := 0; i < len(products); i++ {
+		for j := i + 1; j < len(products); j++ {
+			// 在售优先
+			if products[i].IsOnSale != products[j].IsOnSale {
+				if !products[i].IsOnSale {
+					products[i], products[j] = products[j], products[i]
+				}
+				continue
+			}
+			// 同组按时段
+			oi := slotOrder[products[i].SlotLabel]
+			oj := slotOrder[products[j].SlotLabel]
+			if oi != oj {
+				if oi > oj {
+					products[i], products[j] = products[j], products[i]
+				}
+				continue
+			}
+			// 同时段按名称
+			if products[i].Name > products[j].Name {
+				products[i], products[j] = products[j], products[i]
+			}
+		}
+	}
+}
+
 // handleHome 首页 - 显示状态
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -381,6 +458,11 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 	cacheMutex.RUnlock()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	// 排序商品：在售优先 → 按时段 → 按名称
+	sortedProducts := make([]Product, len(result.Products))
+	copy(sortedProducts, result.Products)
+	sortProducts(sortedProducts, result.TimeSlots)
 
 	// 构建所有商品卡片HTML（一次性写入，避免fmt.Sprintf参数数量问题）
 	var buf strings.Builder
@@ -410,7 +492,7 @@ h1{color:#333;margin-bottom:12px}
 	}
 	buf.WriteString("</p>\n<h2 style=\"margin-top:20px\">当前商品</h2>\n")
 
-	for _, p := range result.Products {
+	for _, p := range sortedProducts {
 		var cls, tagCls, badge string
 		if p.IsOnSale {
 			cls = "onsale"
